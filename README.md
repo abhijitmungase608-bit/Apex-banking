@@ -1,30 +1,62 @@
 # APEX BANKING (apexbank.in)
 > **Banking Beyond Limits.**  
-> Real Digital Banking Web Application & Installable PWA for India.
+> Real Institutional Full-Stack Digital Banking Platform & Installable PWA for India.
 
 ---
 
 ## 🌟 Executive Overview
 
-**APEX BANKING** is an enterprise-grade digital banking web application and PWA engineered specifically for Indian retail and SME banking customers. Designed with a premium light theme palette (Royal Blue `#246BFD`, Dark Blue `#102A56`, White `#FFFFFF`, and Crisp Slate `#F5F8FD`), it provides an institutional-grade financial experience adhering to Reserve Bank of India (RBI) and National Payments Corporation of India (NPCI) standards.
+**APEX BANKING** is a full-stack, enterprise-grade digital banking web application and PWA engineered specifically for Indian retail and SME banking customers. Designed with a premium light theme palette (Royal Blue `#246BFD`, Dark Blue `#102A56`, White `#FFFFFF`, and Crisp Slate `#F5F8FD`), it provides an institutional-grade financial experience adhering to Reserve Bank of India (RBI) and National Payments Corporation of India (NPCI) standards.
+
+---
+
+## 🏛️ System Architecture
+
+```
++---------------------------------------------------------------------------------+
+|                         CLIENT LAYER (PWA / Mobile / Desktop)                   |
+|  - React 18 + Vite + TypeScript + Tailwind CSS                                  |
+|  - Offline-ready Service Worker + Local Storage State Sync                      |
+|  - Responsive Glassmorphic Light UI (#246BFD / #102A56 / #F5F8FD)               |
++---------------------------------------------------------------------------------+
+                                       |
+                              HTTPS / REST / WSS
+                                       |
++---------------------------------------------------------------------------------+
+|                 NESTJS MODULAR CORE BANKING BACKEND (Port 4000)                 |
+|  - Auth & Security (JWT, MFA, Password Policy, Session Controls)                |
+|  - Double-Entry Immutable Ledger Engine (Debits = Credits)                      |
+|  - NPCI UPI 2.0 & RBI IMPS/NEFT/RTGS Adapters with ₹1 Penny-Drop Check          |
+|  - WebSocket Gateway (ws://localhost:4000/ws) for Real-Time Event Streaming     |
+|  - OpenAPI Swagger Documentation (http://localhost:4000/api/docs)             |
+|  - Centralized RFC 7807 Exception Filter & Strict Idempotency Interceptor       |
++---------------------------------------------------------------------------------+
+                                       |
++---------------------------------------------------------------------------------+
+|                        PERSISTENCE & RECONCILIATION                             |
+|  - PostgreSQL 16 (16-Model Database Schema via Prisma ORM)                      |
+|  - Redis 7 (Distributed Locks & Token Bucket Rate Limiting)                     |
+|  - Immutable Audit Event Stream & Signed Webhook Storage                        |
++---------------------------------------------------------------------------------+
+```
 
 ---
 
 ## 🚀 Key Features & Modules
 
-### 1. Customer Application (24 Full Modules)
-1. **Splash Screen**: Animated institutional brand loading with 256-bit SSL verification badge.
-2. **Welcome Page**: Modern Apple-style fintech onboarding highlighting UPI 2.0, zero-fee IMPS, virtual RuPay debit, and high-yield FDs.
-3. **Registration**: Paperless account onboarding with Aadhaar/PAN regulatory consent.
-4. **Login**: Secure credentials login with quick one-click sandbox test account fill.
+### 1. Customer Application (All 24 Pages)
+1. **Splash Screen**: Institutional loading with 256-bit encryption badge.
+2. **Welcome Page**: Modern fintech onboarding highlighting UPI 2.0, virtual cards, and high-yield FDs.
+3. **Registration**: Paperless onboarding with Aadhaar & PAN regulatory consent.
+4. **Login**: Secure sign-in with fast demo credentials autofill & biometric simulation.
 5. **Two-Factor Authentication (OTP)**: 6-digit challenge verification with sandbox pre-filled code `123456`.
 6. **Forgot Password**: Self-service recovery with email/SMS token dispatch.
 7. **Customer Dashboard**:
-   - Total & available balance with balance visibility toggle (`Show/Hide Balances`).
+   - Total & available balance with **Balance Visibility Toggle** (`Show/Hide Balances`).
    - Personalized welcome banner with KYC approval badge.
    - Quick action ribbon: Send Money, UPI Pay, Receive (QR Code modal), Download Statement.
    - RuPay Signature debit card preview.
-   - Monthly spending analytics via Recharts area graph.
+   - Monthly spending analytics area chart (powered by Recharts).
    - Linked accounts quick switcher.
    - Real-time double-entry transaction feed.
 8. **Account Overview**: Comprehensive portfolio breakdown across Savings, Current, and Term Deposits.
@@ -63,11 +95,26 @@
 | Layer | Technologies |
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, Lucide React, Framer Motion, Recharts, Canvas Confetti |
+| **Backend** | NestJS 10, Node.js 20, TypeScript, REST APIs, Pure WebSockets (`ws`), Class-Validator, Swagger |
+| **Database** | PostgreSQL 16 with Prisma ORM, Double-Entry Immutable Ledger |
+| **Cache & Queue** | Redis 7 (Distributed Locking, Idempotency Caching, Throttling) |
+| **Infrastructure** | Docker, Docker Compose, Nginx Reverse Proxy, GitHub Actions CI/CD |
 | **PWA** | Web App Manifest (`manifest.json`), Offline Service Worker (`sw.js`), Apple Touch Icon |
-| **Data Layer** | Double-Entry Immutable Core Ledger, Local Storage Persistence, State Machine Engine |
-| **Database Schema** | PostgreSQL Enterprise Schema defined with Prisma ORM (`prisma/schema.prisma`) |
-| **API Specification** | Comprehensive REST API Specification (`docs/API_SPECIFICATION.md`) |
-| **Architecture** | System Architecture Blueprint (`docs/ARCHITECTURE.md`) |
+
+---
+
+## 🐳 Docker Containerization
+
+To run the complete full-stack banking ecosystem (PostgreSQL + Redis + NestJS Backend + Nginx Frontend):
+
+```bash
+docker-compose up --build
+```
+
+- **Frontend Web App & PWA**: `http://localhost`
+- **Backend Core REST API**: `http://localhost:4000/api/v1`
+- **Swagger Documentation**: `http://localhost:4000/api/docs`
+- **WebSocket Gateway**: `ws://localhost:4000/ws`
 
 ---
 
@@ -82,21 +129,3 @@
 - **Identifier**: `admin.aditi@apexbank.in`
 - **Password**: `AdminSecurity#2026`
 - **Direct Portal**: Navigate to `/admin` or click "Open Admin Portal" in the user dropdown.
-
----
-
-## 🏃 Running the Application
-
-```bash
-# Install dependencies
-npm install
-
-# Start Vite development server
-npm run dev
-
-# Build production bundle
-npm run build
-
-# Preview production build
-npm run preview
-```
