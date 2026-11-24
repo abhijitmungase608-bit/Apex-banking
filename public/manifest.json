@@ -1,0 +1,16 @@
+{
+  "short_name": "ApexBanking",
+  "name": "APEX BANKING - Banking Beyond Limits",
+  "icons": [
+    {
+      "src": "/apex-logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#F5F8FD",
+  "theme_color": "#246BFD",
+  "display": "standalone",
+  "orientation": "portrait"
+}

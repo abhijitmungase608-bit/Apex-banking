@@ -1,0 +1,374 @@
+// APEX BANKING - PRISMA DATABASE SCHEMA
+// Target: PostgreSQL / Enterprise Digital Banking System
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  COMPLIANCE_OFFICER
+  AUDITOR
+}
+
+enum KycStatus {
+  NOT_SUBMITTED
+  PENDING_VERIFICATION
+  APPROVED
+  REJECTED
+  DOCUMENTS_REQUIRED
+}
+
+enum AccountType {
+  SAVINGS
+  CURRENT
+  SALARY
+  FIXED_DEPOSIT
+  RECURRING_DEPOSIT
+}
+
+enum AccountStatus {
+  ACTIVE
+  DORMANT
+  FROZEN
+  CLOSED
+}
+
+enum TransferType {
+  UPI
+  IMPS
+  NEFT
+  RTGS
+  INTERNAL_TRANSFER
+  LOAN_DISBURSEMENT
+  INTEREST_CREDIT
+}
+
+enum TransactionStatus {
+  CREATED
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  REVERSED
+}
+
+enum LedgerType {
+  DEBIT
+  CREDIT
+}
+
+enum CardType {
+  VIRTUAL_DEBIT
+  PHYSICAL_DEBIT
+  PREMIUM_SIGNATURE
+}
+
+enum CardStatus {
+  ACTIVE
+  BLOCKED
+  EXPIRED
+  INACTIVE
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model User {
+  id               String          @id @default(uuid())
+  email            String          @unique
+  phoneNumber      String          @unique
+  passwordHash     String
+  role             Role            @default(CUSTOMER)
+  isMfaEnabled     Boolean         @default(true)
+  mfaSecret        String?
+  failedLogins     Int             @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  customerProfile  CustomerProfile?
+  sessions         UserSession[]
+  auditLogs        AuditLog[]
+  supportTickets   SupportTicket[]
+  notifications    Notification[]
+}
+
+model CustomerProfile {
+  id               String       @id @default(uuid())
+  userId           String       @unique
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName         String
+  dateOfBirth      DateTime?
+  panNumber        String?      @unique
+  aadhaarLastFour  String?
+  addressLine1     String?
+  city             String?
+  state            String?
+  pincode          String?
+  upiId            String?      @unique
+  avatarUrl        String?
+  kycRecord        KYCRecord?
+  accounts         Account[]
+  beneficiaries    Beneficiary[]
+  devices          DeviceReference[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model UserSession {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken   String    @unique
+  deviceFingerprint String?
+  userAgent      String?
+  ipAddress      String?
+  lastActiveAt   DateTime  @default(now())
+  expiresAt      DateTime
+  isRevoked      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+}
+
+model DeviceReference {
+  id             String           @id @default(uuid())
+  profileId      String
+  profile        CustomerProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  deviceName     String
+  deviceType     String           // Mobile / Desktop / Tablet
+  os             String
+  browser        String
+  ipAddress      String
+  isTrusted      Boolean          @default(true)
+  lastUsedAt     DateTime         @default(now())
+  createdAt      DateTime         @default(now())
+}
+
+model KYCRecord {
+  id               String           @id @default(uuid())
+  profileId        String           @unique
+  profile          CustomerProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  status           KycStatus        @default(NOT_SUBMITTED)
+  panDocRef        String?
+  aadhaarDocRef    String?
+  selfieDocRef     String?
+  verifiedAt       DateTime?
+  verifiedByAdminId String?
+  rejectionReason  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model Account {
+  id               String           @id @default(uuid())
+  profileId        String
+  profile          CustomerProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  accountNumber    String           @unique
+  ifscCode         String           @default("APEX0001088")
+  accountType      AccountType      @default(SAVINGS)
+  status           AccountStatus    @default(ACTIVE)
+  currency         String           @default("INR")
+  availableBalance Decimal          @default(0.0)
+  ledgerBalance    Decimal          @default(0.0)
+  isPrimary        Boolean          @default(true)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  sentTransactions Transaction[]    @relation("SourceAccount")
+  receivedTransactions Transaction[] @relation("DestAccount")
+  ledgerEntries    LedgerEntry[]
+  cards            CardReference[]
+  fixedDeposits    FixedDeposit[]
+  loans            LoanRecord[]
+}
+
+model Beneficiary {
+  id               String           @id @default(uuid())
+  profileId        String
+  profile          CustomerProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  name             String
+  nickname         String?
+  accountNumber    String?
+  ifscCode         String?
+  bankName         String?
+  upiId            String?
+  isVerified       Boolean          @default(false)
+  verifiedAt       DateTime?
+  dailyLimit       Decimal          @default(100000.0)
+  createdAt        DateTime         @default(now())
+}
+
+model Transaction {
+  id                 String             @id @default(uuid())
+  referenceNumber    String             @unique // APX_TXN_...
+  idempotencyKey     String             @unique
+  sourceAccountId    String
+  sourceAccount      Account            @relation("SourceAccount", fields: [sourceAccountId], references: [id])
+  destinationAccountId String?
+  destinationAccount Account?          @relation("DestAccount", fields: [destinationAccountId], references: [id])
+  counterpartyName   String
+  counterpartyDetail String             // Account/IFSC or UPI VPA
+  transferType       TransferType
+  amount             Decimal
+  fee                Decimal            @default(0.0)
+  status             TransactionStatus  @default(CREATED)
+  remarks            String?
+  bankRrn            String?            // Bank Retrieval Reference Number
+  providerStatusMsg  String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  paymentAttempts    PaymentAttempt[]
+  ledgerEntries      LedgerEntry[]
+}
+
+model PaymentAttempt {
+  id               String       @id @default(uuid())
+  transactionId    String
+  transaction      Transaction  @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  attemptNumber    Int          @default(1)
+  providerName     String       // APEX_SWITCH, NPCI_UPI, RBI_NEFT
+  providerReqId    String?
+  providerRespCode String?
+  status           TransactionStatus
+  rawResponse      String?
+  createdAt        DateTime     @default(now())
+}
+
+model LedgerEntry {
+  id               String       @id @default(uuid())
+  accountId        String
+  account          Account      @relation(fields: [accountId], references: [id])
+  transactionId    String
+  transaction      Transaction  @relation(fields: [transactionId], references: [id])
+  entryType        LedgerType
+  amount           Decimal
+  balanceAfter     Decimal
+  description      String
+  createdAt        DateTime     @default(now())
+}
+
+model CardReference {
+  id               String       @id @default(uuid())
+  accountId        String
+  account          Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  cardType         CardType     @default(VIRTUAL_DEBIT)
+  cardNetwork      String       @default("RuPay") // RuPay, Visa, Mastercard
+  lastFourDigits   String       // Sensitive tokenized representation only
+  expiryMonth      Int
+  expiryYear       Int
+  cardHolderName   String
+  status           CardStatus   @default(ACTIVE)
+  dailyAtmLimit    Decimal      @default(50000.0)
+  dailyOnlineLimit Decimal      @default(100000.0)
+  isDomesticActive Boolean      @default(true)
+  isInternationalActive Boolean @default(false)
+  isContactlessActive   Boolean @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model FixedDeposit {
+  id               String       @id @default(uuid())
+  accountId        String
+  account          Account      @relation(fields: [accountId], references: [id])
+  fdNumber         String       @unique
+  depositAmount    Decimal
+  interestRate     Decimal      // e.g., 7.50%
+  tenureMonths     Int
+  maturityAmount   Decimal
+  maturityDate     DateTime
+  status           String       @default("ACTIVE") // ACTIVE, MATURED, PREMATURE_CLOSED
+  createdAt        DateTime     @default(now())
+}
+
+model LoanRecord {
+  id               String       @id @default(uuid())
+  accountId        String
+  account          Account      @relation(fields: [accountId], references: [id])
+  loanNumber       String       @unique
+  loanType         String       // Personal, Home, Vehicle
+  principalAmount  Decimal
+  interestRate     Decimal      // e.g., 10.25%
+  tenureMonths     Int
+  emiAmount        Decimal
+  outstandingAmount Decimal
+  status           String       @default("ACTIVE") // PENDING, ACTIVE, CLOSED
+  disbursedAt      DateTime?
+  createdAt        DateTime     @default(now())
+}
+
+model Notification {
+  id               String       @id @default(uuid())
+  userId           String
+  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String
+  message          String
+  category         String       // TRANSACTION, SECURITY, OFFER, SYSTEM
+  isRead           Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+}
+
+model SupportTicket {
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id])
+  ticketNumber     String         @unique
+  subject          String
+  description      String
+  priority         TicketPriority @default(MEDIUM)
+  status           TicketStatus   @default(OPEN)
+  category         String         // PAYMENTS, CARDS, KYC, GENERAL
+  adminResponse    String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model AuditLog {
+  id               String       @id @default(uuid())
+  userId           String?
+  user             User?        @relation(fields: [userId], references: [id])
+  action           String       // LOGIN_SUCCESS, TRANSFER_EXECUTE, KYC_APPROVE, CARD_FREEZE
+  resource         String
+  ipAddress        String?
+  details          String?
+  createdAt        DateTime     @default(now())
+}
+
+model WebhookEvent {
+  id               String       @id @default(uuid())
+  provider         String       // NPCI_UPI, RBI_NEFT, BANK_CORE
+  eventType        String
+  signature        String
+  payload          String
+  isProcessed      Boolean      @default(false)
+  receivedAt       DateTime     @default(now())
+}
+
+model ReconciliationRecord {
+  id               String       @id @default(uuid())
+  date             DateTime
+  totalTransactions Int
+  matchedCount     Int
+  discrepancyCount Int
+  status           String       // RECONCILED, DISCREPANCY_FLAGGED
+  notes            String?
+  createdAt        DateTime     @default(now())
+}
